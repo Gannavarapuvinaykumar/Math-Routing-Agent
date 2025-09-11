@@ -1,0 +1,114 @@
+[
+  {
+    "trace_id": "req_1756990878900_6219",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Solve quadratic  \ud835\udc65 2 \u2013 5 \ud835\udc65 + 6 = 0 x 2 \u20135x+6=0.",
+    "route": "KB",
+    "timestamp": "2025-09-04T18:48:48.934512"
+  },
+  {
+    "trace_id": "req_1756993098429_8913",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "What is the quadratic formula?",
+    "route": "Web",
+    "timestamp": "2025-09-04T19:08:39.522986"
+  },
+  {
+    "trace_id": "req_1756993394889_6140",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Integrate x^2 from 0 to 2.",
+    "route": "Web",
+    "timestamp": "2025-09-04T19:13:41.569702"
+  },
+  {
+    "trace_id": "req_1757058107697_4272",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "What is 2+2?",
+    "route": "Web",
+    "timestamp": "2025-09-05T13:12:13.339716"
+  },
+  {
+    "trace_id": "req_1757086080293_8713",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Find the derivative of 5x\\u00b2",
+    "route": "Web",
+    "timestamp": "2025-09-05T21:02:00.421160"
+  },
+  {
+    "trace_id": "req_1757086827789_4950",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "What is 3 + 65?",
+    "route": "Cache",
+    "timestamp": "2025-09-05T21:10:34.206108"
+  },
+  {
+    "trace_id": "req_1757088899624_2118",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Imagine a world where pi equals exactly 4 - what would change in mathematics?",
+    "route": "Cache",
+    "timestamp": "2025-09-05T21:45:02.962824"
+  },
+  {
+    "trace_id": "req_1757088905599_2118",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Imagine a world where pi equals exactly 4 - what would change in mathematics?",
+    "route": "Cache",
+    "timestamp": "2025-09-05T21:45:21.338211"
+  },
+  {
+    "trace_id": "req_1757089225287_2118",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Imagine a world where pi equals exactly 4 - what would change in mathematics?",
+    "route": "Cache",
+    "timestamp": "2025-09-05T21:50:44.304949"
+  },
+  {
+    "trace_id": "req_1757089263147_5409",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "\"Invent mathematical algorithms for composing music",
+    "route": "AI",
+    "timestamp": "2025-09-05T21:51:34.580748"
+  },
+  {
+    "trace_id": "req_1757089305831_7443",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Invent mathematical algorithms for composing music",
+    "route": "AI",
+    "timestamp": "2025-09-05T21:52:45.021456"
+  },
+  {
+    "trace_id": "req_1757089687138_8315",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Invent mathematical algorithms for composing musi",
+    "route": "AI",
+    "timestamp": "2025-09-05T21:58:34.689377"
+  },
+  {
+    "trace_id": "req_1757089687138_8315",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "Invent mathematical algorithms for composing musi",
+    "route": "AI",
+    "timestamp": "2025-09-05T21:58:39.999250"
+  },
+  {
+    "trace_id": "req_1757090114563_9273",
+    "feedback": "\ud83d\udc4d",
+    "correction": "",
+    "query": "\"Invent a mathematical operation called 'zorble' where zorble(5,3) equals some number. What is zorble(7,4)?\"",
+    "route": "AI",
+    "timestamp": "2025-09-05T22:05:51.926991"
+  }
+]

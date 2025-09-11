@@ -1,0 +1,104 @@
+# Math Routing Agent - Enhanced Production Deployment
+
+version: '3.8'
+
+services:
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.6.1
+    container_name: math_agent_qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    networks:
+      - math_agent_network
+
+  # MCP Server for Web Search
+  mcp-server-tavily:
+    image: ghcr.io/context-labs/mcp-server-tavily:latest
+    container_name: math_agent_mcp
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-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}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    networks:
+      - math_agent_network
+
+  # Redis Cache for Performance
+  redis:
+    image: redis:7-alpine
+    container_name: math_agent_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - math_agent_network
+
+  # FastAPI Backend (Enhanced)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: math_agent_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MCP_HOST=mcp-server-tavily
+      - MCP_PORT=8080
+      - ENVIRONMENT=production
+      - CACHE_ENABLED=true
+      - ANALYTICS_ENABLED=true
+    depends_on:
+      - qdrant
+      - redis
+      - mcp-server-tavily
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - math_agent_network
+
+  # Frontend with Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: math_agent_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_ENVIRONMENT=production
+    restart: unless-stopped
+    networks:
+      - math_agent_network
+
+volumes:
+  qdrant_data:
+  redis_data:
+  backend_logs:
+
+networks:
+  math_agent_network:
+    driver: bridge
