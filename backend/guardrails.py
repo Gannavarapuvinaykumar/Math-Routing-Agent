@@ -41,6 +41,18 @@ class InputGuardrails:
         self.math_symbols = set('^+-*/=()[]{}√∫∑∏∆∇∞π θ α β γ δ ε λ μ σ Φ')
     
     def validate_input(self, query: str) -> Tuple[bool, str]:
+        # Quick accept for short/simple math expressions (e.g. "a+b", "2*x+3")
+        # This avoids false negatives from the zero-shot classifier on terse inputs.
+        try:
+            if isinstance(query, str):
+                simple_expr_pattern = r'^[\s0-9a-zA-Z\+\-\*\/\^\=\(\)\[\]\{\}\.]+$'
+                has_operator = re.search(r'[\+\-\*\/\^=]', query) is not None
+                if re.match(simple_expr_pattern, query) and has_operator and len(query) <= 200:
+                    return True, "Input validated as simple math expression"
+        except Exception:
+            # If regex matching fails for any reason, continue to classifier/fallback checks
+            pass
+
         # AI-based guardrail (preferred)
         ALLOWED_LABELS = ["mathematics", "education"]
         FORBIDDEN_LABELS = ["politics", "health", "cybersecurity", "university", "news", "sports", "business", "entertainment", "history", "geography", "science", "technology", "general"]

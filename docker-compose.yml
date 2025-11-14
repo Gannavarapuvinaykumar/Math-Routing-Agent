@@ -5,7 +5,9 @@ version: '3.8'
 services:
   # Qdrant Vector Database
   qdrant:
-    image: qdrant/qdrant:v1.6.1
+    # Use a qdrant server version compatible with qdrant-client==1.7.3
+    # (avoid pydantic parsing/response schema mismatches seen with much newer 'latest' images)
+    image: qdrant/qdrant:1.7.3
     container_name: math_agent_qdrant
     ports:
       - "6333:6333"

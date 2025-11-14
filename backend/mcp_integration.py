@@ -1,10 +1,10 @@
 """
 MCP (Model Context Protocol) Integration for Web Search
-Since the Docker MCP server is not available, we'll implement MCP-style structured communication
+Provides a thin local MCP-style wrapper that forwards search requests to Tavily.
 """
 import httpx
 import json
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any
 import os
 from datetime import datetime
 
@@ -124,14 +124,16 @@ class MCPWebSearchServer:
     
     def _perform_tavily_search(self, query: str, search_depth: str = "basic", 
                               include_answer: bool = True, include_raw_content: bool = False) -> Dict:
-        """Perform actual Tavily API search"""
+        """Perform actual Tavily API search. This implementation always forwards to Tavily and
+        returns a structured dict or an error object when the API key is missing or the request fails.
+        """
         if not self.tavily_api_key:
             return {
                 "error": "Tavily API key not configured",
                 "query": query,
                 "timestamp": datetime.now().isoformat()
             }
-        
+
         try:
             tavily_url = 'https://api.tavily.com/search'
             headers = {'Authorization': f'Bearer {self.tavily_api_key}'}
@@ -141,11 +143,11 @@ class MCPWebSearchServer:
                 "include_answer": include_answer,
                 "include_raw_content": include_raw_content
             }
-            
+
             response = httpx.post(tavily_url, json=payload, headers=headers, timeout=15)
             response.raise_for_status()
             data = response.json()
-            
+
             # Structure response in MCP format
             mcp_result = {
                 "query": query,
@@ -158,12 +160,12 @@ class MCPWebSearchServer:
                     "provider": "Tavily"
                 }
             }
-            
+
             if include_raw_content:
                 mcp_result["raw_data"] = data
-            
+
             return mcp_result
-            
+
         except Exception as e:
             return {
                 "error": f"Search failed: {str(e)}",
