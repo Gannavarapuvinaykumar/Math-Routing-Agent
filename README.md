@@ -253,4 +253,3 @@ For questions, issues, or contributions:
 
 ---
 
-**Made with ❤️ for advancing mathematical AI assistance**
