@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
+import os
 
 # Import all route modules
 from routes_websearch import router as websearch_router
@@ -60,7 +61,29 @@ async def startup_event():
     logger.info("Performance analytics ready")
     logger.info("Math cache ready")
     logger.info("Translation service ready")
-    
+    # Basic environment / API key checks to help diagnose web/AI failures
+    tavily_key = os.getenv("TAVILY_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+
+    def _mask(key: str):
+        if not key:
+            return None
+        if len(key) <= 8:
+            return "*" * len(key)
+        return key[:4] + "..." + key[-4:]
+
+    if not tavily_key:
+        logger.warning("TAVILY_API_KEY is not set. Web search via Tavily will fail.")
+    else:
+        if tavily_key.startswith("ghp_") or tavily_key.startswith("gho_"):
+            logger.warning("TAVILY_API_KEY looks like a GitHub token (starts with ghp_/gho_). Please verify the Tavily API key.")
+        logger.info(f"TAVILY_API_KEY present: {_mask(tavily_key)}")
+
+    if not openai_key:
+        logger.warning("OPENAI_API_KEY is not set. AI generation via OpenAI will fail.")
+    else:
+        logger.info(f"OPENAI_API_KEY present: {_mask(openai_key)}")
+
     logger.info("Math Routing Agent startup complete")
 
 @app.get("/")
@@ -116,6 +139,28 @@ def get_status():
             "success_rate": round(analytics.get("success_rate", 100), 1),
             "avg_response_time": round(analytics.get("avg_response_time", 0), 2)
         }
+    })
+
+
+@app.get("/api/diagnostics")
+def diagnostics():
+    """Expose masked diagnostics for environment and quick guidance"""
+    tavily_key = os.getenv("TAVILY_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+
+    def _mask(key: str):
+        if not key:
+            return None
+        if len(key) <= 8:
+            return "*" * len(key)
+        return key[:4] + "..." + key[-4:]
+
+    return JSONResponse(content={
+        "tavily_key_present": bool(tavily_key),
+        "tavily_key_masked": _mask(tavily_key),
+        "openai_key_present": bool(openai_key),
+        "openai_key_masked": _mask(openai_key),
+        "advice": "If web search or AI generation fails, ensure these keys are correctly set in backend/.env and restart the server."
     })
 
 # Enhanced feedback endpoint with KB storage
