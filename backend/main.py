@@ -20,6 +20,7 @@ from system_monitor import router as monitor_router
 from performance_analytics import performance_analytics
 from cache_manager import math_cache
 from translation_service import translation_service
+from master_router import router as master_router
 
 # Load environment variables
 load_dotenv()
@@ -195,6 +196,7 @@ app.include_router(agent_router, prefix="/api", tags=["Agent Pipeline"])
 
 # Register new enhanced modules
 app.include_router(monitor_router, prefix="/api", tags=["System Monitoring"])
+app.include_router(master_router, prefix="/api", tags=["Master Router"]) 
 
 # Exception handler for better error responses
 @app.exception_handler(Exception)

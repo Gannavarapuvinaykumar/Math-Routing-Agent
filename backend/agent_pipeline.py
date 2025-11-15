@@ -5,9 +5,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
+from qdrant_client.http.models import PointStruct, VectorParams
 import os
 import httpx
 from dotenv import load_dotenv
+import time
+from datetime import datetime
 
 # Import new modules
 from guardrails import guardrails
@@ -62,20 +65,62 @@ router = APIRouter()
 def kb_search_tool(query: str):
     """Enhanced KB search with better handling for user-validated content"""
     try:
+        # Normalization helper for exact-match detection
+        def normalize_question(q: str) -> str:
+            return " ".join(q.strip().lower().split())
+
+        normalized_q = normalize_question(query)
+
+        # If the query contains numeric literals, prefer exact normalized matches only
+        import re
+        contains_number = bool(re.search(r"\d", query))
+
+        # First do a semantic search (top 10) and look for an exact normalized question match
         query_vec = model.encode(query).tolist()
         search_result = client.search(
             collection_name=COLLECTION_NAME,
             query_vector=query_vec,
-            limit=3  # Get top 3 results to check for user-validated content
+            limit=10
         )
+
+        if search_result:
+            for res in search_result:
+                payload = res.payload or {}
+                if payload.get("question_norm") == normalized_q:
+                    # Exact stored question match — return immediately with high confidence
+                    return {
+                        "question": payload.get("question"),
+                        "answer": payload.get("answer"),
+                        "steps": payload.get("steps"),
+                        "topic": payload.get("topic"),
+                        "subtopic": payload.get("subtopic"),
+                        "difficulty": payload.get("difficulty"),
+                        "source": "Knowledge Base (Exact)",
+                        "original_source": payload.get("source"),
+                        "validated_by_user": payload.get("validated_by_user", False),
+                        "score": res.score
+                    }
+
+        # If the incoming query contains numbers and we did not find an exact normalized match,
+        # do not fall back to returning other semantically similar entries (to avoid numeric mismatches).
+        if contains_number:
+            return None
+
+        # No exact normalized match; fall back to semantic logic (top 3)
+        search_result = client.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=query_vec,
+            limit=3
+        )
+
         if not search_result:
             return None
-        
+
         # Check results - prioritize user-validated content with lower threshold
         for result in search_result:
-            payload = result.payload
+            payload = result.payload or {}
             score = result.score
-            
+
             # User-validated content gets lower threshold (more lenient)
             if payload.get("validated_by_user") or payload.get("route_origin") in ["web", "ai"]:
                 if score >= 0.45:  # Lower threshold for validated content
@@ -92,7 +137,7 @@ def kb_search_tool(query: str):
                         "validated_by_user": True,
                         "score": score
                     }
-            
+
             # Regular KB content uses normal threshold
             elif score >= 0.65:
                 return {
@@ -106,10 +151,10 @@ def kb_search_tool(query: str):
                     "original_source": payload.get("source"),
                     "score": score
                 }
-        
+
         # No good matches found
         return None
-        
+
     except Exception as e:
         print(f"❌ KB search error: {e}")
         return {
@@ -207,6 +252,109 @@ def input_guardrail(query: str):
 		return True
 	return False
 
+
+def persist_to_kb(route_origin: str, query: str, answer: str, steps: str | None = None, sources: list | None = None, metadata: dict | None = None):
+    """Persist a Q&A pair into the Qdrant `math_kb` collection.
+
+    route_origin: one of 'web', 'ai', 'human', or 'kb'
+    """
+    try:
+        # Use the question alone for the KB vector so future searches (query embeddings)
+        # match the stored points reliably. Storing the question-only vector improves
+        # recall when users re-ask the same or similar questions.
+        vec = model.encode(query).tolist()
+
+        # Normalized question for exact-match detection
+        def normalize_question(q: str) -> str:
+            return " ".join(q.strip().lower().split())
+
+        question_norm = normalize_question(query)
+
+        payload = {
+            "question": query,
+            "question_norm": question_norm,
+            "answer": answer,
+            "steps": steps,
+            "topic": metadata.get("topic") if metadata else None,
+            "subtopic": metadata.get("subtopic") if metadata else None,
+            "difficulty": metadata.get("difficulty") if metadata else None,
+            "source": route_origin,
+            "route_origin": route_origin,
+            "validated_by_user": False,
+            "created_at": datetime.utcnow().isoformat(),
+            "additional_sources": sources or []
+        }
+
+        # Build a candidate point; id may be replaced if we find an existing similar point
+        new_point = {
+            "id": int(time.time() * 1000),
+            "vector": vec,
+            "payload": payload
+        }
+
+        # Deduplication: search for exact normalized question match first, then for extremely similar vectors
+        try:
+            search_candidates = client.search(collection_name=COLLECTION_NAME, query_vector=vec, limit=5)
+            existing_id = None
+            for cand in search_candidates:
+                cand_payload = cand.payload or {}
+                # Exact normalized question match -> update that point
+                if cand_payload.get("question_norm") == question_norm:
+                    existing_id = getattr(cand, "id", None) or cand.payload.get("id")
+                    print(f"Found existing exact KB entry (id={existing_id}), updating instead of inserting.")
+                    break
+            # If no exact match, check for almost-identical vector (very high similarity)
+            if existing_id is None:
+                for cand in search_candidates:
+                    score = getattr(cand, "score", None)
+                    if score is not None and score >= 0.95:
+                        existing_id = getattr(cand, "id", None) or cand.payload.get("id")
+                        print(f"Found very similar KB entry (id={existing_id}, score={score}), updating instead of inserting.")
+                        break
+
+            if existing_id:
+                # Overwrite id so upsert performs update
+                new_point["id"] = existing_id
+        except Exception:
+            # If search fails (e.g., collection missing), we'll rely on the normal upsert/create flow below
+            pass
+
+        try:
+            client.upsert(collection_name=COLLECTION_NAME, points=[new_point])
+            print(f"Stored new KB item from {route_origin} for query: {query}")
+            return True
+        except Exception as e:
+            # If the collection does not exist, create it with the correct vector size and retry once
+            err = str(e)
+            print(f"Error persisting to KB: {e}")
+            if "doesn't exist" in err or "Not found" in err or 'Collection' in err and 'doesn' in err:
+                try:
+                    vec_size = len(vec)
+                    print(f"Creating missing collection '{COLLECTION_NAME}' with vector size {vec_size} (no destructive operations)")
+                    # Create the collection only if it does not exist to avoid data loss
+                    existing = [c.name for c in client.get_collections().collections]
+                    if COLLECTION_NAME not in existing:
+                        client.create_collection(
+                            collection_name=COLLECTION_NAME,
+                            vectors_config=VectorParams(size=vec_size, distance="Cosine")
+                        )
+                    else:
+                        print(f"Collection '{COLLECTION_NAME}' unexpectedly exists after NotFound error; skipping creation to avoid data loss")
+                    # Retry upsert
+                    client.upsert(collection_name=COLLECTION_NAME, points=[new_point])
+                    print(f"Stored new KB item after creating collection: {query}")
+                    return True
+                except Exception as e2:
+                    print(f"Failed to create collection or persist point: {e2}")
+            else:
+                # Other errors; just log
+                print(f"Unhandled error persisting to KB: {e}")
+            return False
+    except Exception as e:
+        print(f"Error persisting to KB: {e}")
+        return False
+    return False
+
 # Enhanced routing pipeline with guardrails and analytics
 @router.post("/agent_route")
 def agent_route(request: QueryRequest):
@@ -290,8 +438,22 @@ def agent_route(request: QueryRequest):
             # Validate output
             is_valid, message, filtered_result = guardrails.process_response(web_result)
             if is_valid:
-                # Cache the Web result
-                math_cache.set(query, filtered_result, "Web")
+                # Persist web answer to KB (store question+answer for future retrieval)
+                try:
+                    persisted = persist_to_kb(
+                        route_origin="web",
+                        query=query,
+                        answer=filtered_result.get("answer") if isinstance(filtered_result, dict) else web_result.get("answer"),
+                        steps=filtered_result.get("steps") if isinstance(filtered_result, dict) else web_result.get("steps"),
+                        sources=filtered_result.get("sources") if isinstance(filtered_result, dict) else web_result.get("sources"),
+                        metadata=filtered_result.get("metadata") if isinstance(filtered_result, dict) else web_result.get("metadata")
+                    )
+                except Exception:
+                    persisted = False
+
+                # If we successfully persisted to KB, cache as KB so next requests hit KB immediately.
+                cache_route = "KB" if persisted else "Web"
+                math_cache.set(query, filtered_result, cache_route)
                 performance_analytics.log_request_end(tracking_id, "Web", True, 1.0)
                 
                 return JSONResponse(content={
@@ -307,8 +469,22 @@ def agent_route(request: QueryRequest):
         # Validate output
         is_valid, message, filtered_result = guardrails.process_response(ai_result)
         if is_valid:
-            # Cache the AI result
-            math_cache.set(query, filtered_result, "AI")
+            # Persist AI answer to KB
+            try:
+                persisted_ai = persist_to_kb(
+                    route_origin="ai",
+                    query=query,
+                    answer=filtered_result.get("answer") if isinstance(filtered_result, dict) else ai_result.get("answer"),
+                    steps=filtered_result.get("steps") if isinstance(filtered_result, dict) else ai_result.get("steps"),
+                    sources=filtered_result.get("sources") if isinstance(filtered_result, dict) else ai_result.get("sources"),
+                    metadata=filtered_result.get("metadata") if isinstance(filtered_result, dict) else ai_result.get("metadata")
+                )
+            except Exception:
+                persisted_ai = False
+
+            # If persisted, cache as KB so subsequent identical queries hit KB
+            cache_route = "KB" if persisted_ai else "AI"
+            math_cache.set(query, filtered_result, cache_route)
             performance_analytics.log_request_end(tracking_id, "AI", True, 1.0)
             
             return JSONResponse(content={
