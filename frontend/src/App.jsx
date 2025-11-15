@@ -1,345 +1,253 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import Header from './components/Header';
+import SearchInput from './components/SearchInput';
+import RouteDisplay from './components/RouteDisplay';
+import RouteVisualization from './components/RouteVisualization';
+import ResultsContainer from './components/ResultsContainer';
+import StepByStep from './components/StepByStep';
+import FeedbackContainer from './components/FeedbackContainer';
+import ParticleBackground from './components/ParticleBackground';
+import HistoryPanel, { addToHistory } from './components/HistoryPanel';
+import LoadingAnimation from './components/LoadingAnimation';
+import ErrorMessage from './components/ErrorMessage';
+import ExportPanel from './components/ExportPanel';
+import { queryAgent, submitFeedback } from './services/apiService';
+import { renderMathJax } from './utils/mathRenderer';
+import { parseResponse, shouldShowFeedback } from './utils/responseParser';
 
 function App() {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState('routing');
   const [route, setRoute] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackData, setFeedbackData] = useState({ rating: 3, feedback: '' });
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [traceId, setTraceId] = useState(null);
-  const [particles, setParticles] = useState([]);
-
-  // Create particle background
-  useEffect(() => {
-    const createParticles = () => {
-      const newParticles = [];
-      for (let i = 0; i < 50; i++) {
-        newParticles.push({
-          id: i,
-          x: Math.random() * 100,
-          y: Math.random() * 100,
-          size: Math.random() * 4 + 2,
-          duration: Math.random() * 10 + 10,
-          delay: Math.random() * 5,
-        });
-      }
-      setParticles(newParticles);
-    };
-    createParticles();
-  }, []);
+  const [error, setError] = useState(null);
+  const [errorType, setErrorType] = useState('general');
+  const [steps, setSteps] = useState([]);
+  const [routeExplanation, setRouteExplanation] = useState('');
 
   // MathJax rendering effect
   useEffect(() => {
-    if (window.MathJax && result) {
-      window.MathJax.typesetPromise().catch((err) => console.log(err));
+    if (result && !result.error) {
+      renderMathJax();
     }
   }, [result]);
 
-  const renderMathContent = (content) => {
-    if (typeof content === 'string') {
-      // Convert common math notation to LaTeX
-      const mathContent = content
-        .replace(/\^(\w+)/g, '^{$1}')  // x^2 -> x^{2}
-        .replace(/\_(\w+)/g, '_{$1}')  // x_1 -> x_{1}
-        .replace(/\bdx\b/g, '\\,dx')   // dx -> \,dx
-        .replace(/\bdy\b/g, '\\,dy')   // dy -> \,dy
-        .replace(/\\frac/g, '\\frac')  // Keep existing LaTeX
-        .replace(/\\int/g, '\\int')    // Keep integral notation
-        .replace(/\\sum/g, '\\sum')    // Keep summation notation
-        .replace(/\\lim/g, '\\lim');   // Keep limit notation
-      
-      return <span className="tex2jax_process" dangerouslySetInnerHTML={{ __html: mathContent }} />;
-    }
-    return content;
-  };
-
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+      setError('Please enter a mathematical question');
+      setErrorType('invalid');
+      return;
+    }
+    
+    // Basic validation for mathematical content - expanded to include more math terms
+    const mathKeywords = [
+      // Operations
+      'solve', 'calculate', 'find', 'compute', 'simplify', 'evaluate', 'determine',
+      // Calculus
+      'integrate', 'derivative', 'differentiate', 'limit', 'gradient',
+      // Variables & symbols
+      'x', 'y', 'z', 'n', '=', '+', '-', '*', '/', '^', 
+      // Functions
+      'sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'exp',
+      // Topics
+      'equation', 'formula', 'theorem', 'proof', 'probability', 'statistics',
+      'algebra', 'geometry', 'calculus', 'trigonometry', 'matrix', 'vector',
+      // Constants & numbers
+      'pi', 'e', 'euler', 'infinity', 'prime', 'fibonacci', 'golden ratio',
+      'constant', 'number', 'value',
+      // Question words with math context
+      'what is', 'how to', 'explain', 'define', 'show', 'prove',
+      // Common math terms
+      'sum', 'product', 'ratio', 'proportion', 'percentage', 'fraction',
+      'decimal', 'integer', 'real', 'complex', 'irrational', 'rational'
+    ];
+    const hasMathContent = mathKeywords.some(keyword => query.toLowerCase().includes(keyword));
+    
+    if (!hasMathContent && query.length < 100) {
+      setError('This does not look like a mathematical problem. Please provide a valid math query.');
+      setErrorType('invalid');
+      return;
+    }
     
     setLoading(true);
+    setLoadingStage('routing');
+    setError(null);
     setResult(null);
     setRoute('');
+    setSteps([]);
+    setRouteExplanation('');
     setShowFeedback(false);
     
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/agent_route`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: query })
-      });
+      // Simulate routing stage
+      setTimeout(() => setLoadingStage('searching'), 500);
+      setTimeout(() => setLoadingStage('thinking'), 1000);
+      setTimeout(() => setLoadingStage('solving'), 1500);
       
-      const data = await response.json();
-      setResult(data.result || data);
+      const data = await queryAgent(query);
+      const parsedData = parseResponse(data);
+      
+      setResult(parsedData);
       setRoute(data.route || '');
       setTraceId(data.trace_id || Date.now().toString());
       setFeedbackSubmitted(false);
       
-      // Show feedback for all successful responses except KB responses and errors
-      if (!data.error && (data.result || data.answer) && data.route !== 'KB') {
+      // Extract steps if available
+      if (data.steps) {
+        const stepsList = typeof data.steps === 'string' 
+          ? data.steps.split('\n').filter(s => s.trim())
+          : data.steps;
+        setSteps(stepsList);
+      }
+      
+      // Generate route explanation
+      if (data.route) {
+        setRouteExplanation(generateRouteExplanation(data.route, data));
+      }
+      
+      // Add to history
+      addToHistory(query, parsedData.answer, data.route);
+      
+      // Show feedback for successful non-KB responses
+      if (shouldShowFeedback(data, data.route)) {
         setShowFeedback(true);
       }
-    } catch (error) {
-      setResult({ error: 'Failed to connect to backend. Make sure the server is running.' });
+    } catch (err) {
+      const errorMsg = err.message || 'Failed to connect to backend. Make sure the server is running.';
+      
+      // Determine error type
+      let errType = 'general';
+      if (err.name === 'AbortError' || errorMsg.includes('timeout')) {
+        errType = 'timeout';
+      } else if (errorMsg.includes('network') || errorMsg.includes('connect')) {
+        errType = 'network';
+      } else if (errorMsg.includes('server') || errorMsg.includes('500')) {
+        errType = 'server';
+      }
+      
+      setError(errorMsg);
+      setErrorType(errType);
+      setResult({ error: errorMsg, type: 'error' });
+      console.error('Search error:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const generateRouteExplanation = (route, data) => {
+    switch(route) {
+      case 'KB':
+        return `Similar solved problem found in knowledge base with high confidence${data.similarity_score ? ` (similarity: ${(data.similarity_score * 100).toFixed(1)}%)` : ''}.`;
+      case 'Web':
+        return 'No matching solution in knowledge base. Searching web resources via MCP for current information.';
+      case 'AI':
+        return 'New problem detected. Using AI generation to solve step-by-step.';
+      case 'Human':
+        return 'Complex problem requiring human expert review and validation.';
+      default:
+        return `Solution routed through ${route} system.`;
+    }
+  };
+
+  const handleSelectFromHistory = (historicalQuery) => {
+    setQuery(historicalQuery);
+    // Optionally trigger search immediately
+    // handleSearch();
+  };
+
   const handleFeedbackSubmit = async (feedbackType, feedbackText = '') => {
     try {
-      // Get the response content from result
       const responseContent = result?.answer || result?.message || result?.error || JSON.stringify(result);
       
-      const response = await fetch(`http://127.0.0.1:8000/api/feedback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          trace_id: traceId,
-          feedback: feedbackType,
-          correction: feedbackText,
-          query: query,
-          route: route,
-          response: responseContent  // ✅ Use the correct variable
-        })
+      const feedbackResult = await submitFeedback({
+        trace_id: traceId,
+        feedback: feedbackType,
+        correction: feedbackText,
+        query: query,
+        route: route,
+        response: responseContent
       });
       
-      const feedbackResult = await response.json();
-      if (response.ok) {
+      if (feedbackResult) {
         setFeedbackSubmitted(true);
         setTimeout(() => setShowFeedback(false), 2000);
         
-        // Show success message if stored in KB
         if (feedbackResult.stored_in_kb) {
           alert('✅ Thank you! Your feedback helped improve the knowledge base!');
         }
-      } else {
-        alert('Failed to submit feedback: ' + feedbackResult.message);
       }
     } catch (error) {
+      console.error('Feedback error:', error);
       alert('Error submitting feedback: ' + error.message);
-    }
-  };
-
-  const handleDetailedFeedbackSubmit = async () => {
-    await handleFeedbackSubmit('detailed', feedbackData.feedback);
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const getRouteColor = (route) => {
-    switch(route) {
-      case 'KB': return '#28a745';
-      case 'Web': return '#007bff';
-      case 'AI': return '#9b59b6';
-      case 'Human': return '#ffc107';
-      case 'Error': return '#dc3545';
-      default: return '#6c757d';
     }
   };
 
   return (
     <div className="app-container">
-      {/* Animated Particle Background */}
-      <div className="particles-container">
-        {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className="particle"
-            style={{
-              left: `${particle.x}%`,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              animationDuration: `${particle.duration}s`,
-              animationDelay: `${particle.delay}s`,
-            }}
-          />
-        ))}
-      </div>
+      <ParticleBackground />
 
       <div className="main-content">
-        <div className="header">
-          <h1>
-            🧮 Math Routing Agent
-          </h1>
-          <p>
-            AI-powered math solver with KB, MCP web search, AI generation, and human feedback loop
-          </p>
-        </div>
+        <Header />
 
-        <div className="input-section">
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask any math question (e.g., 'Solve x² - 5x + 6 = 0')"
-            className="query-input"
+        <HistoryPanel onSelectQuery={handleSelectFromHistory} />
+
+        <SearchInput
+          query={query}
+          onChange={setQuery}
+          onSearch={handleSearch}
+          isLoading={loading}
+        />
+
+        {loading && <LoadingAnimation stage={loadingStage} />}
+
+        {error && !loading && (
+          <ErrorMessage 
+            error={error} 
+            type={errorType}
+            onRetry={handleSearch}
           />
-          <button 
-            onClick={handleSearch} 
-            disabled={loading || !query}
-            className={`search-button ${loading ? 'loading' : ''}`}
-          >
-            {loading ? '🔍 Searching...' : '🚀 Solve Problem'}
-          </button>
-        </div>
-
-        {route && (
-          <div 
-            className="route-display"
-            style={{ 
-              background: `${getRouteColor(route)}15`,
-              border: `2px solid ${getRouteColor(route)}`
-            }}
-          >
-            <span 
-              className="route-text"
-              style={{ color: getRouteColor(route) }}
-            >
-              📍 Source: {route === 'KB' ? '📚 Knowledge Base' : route === 'Web' ? '🌐 Web Search (MCP)' : route === 'AI' ? '🤖 AI Generation' : route === 'Human' ? '👨‍🏫 Human Expert' : '❌ Error'}
-            </span>
-          </div>
         )}
 
-        {result && (
-          <div className="results-container fade-in">
-            {result.error ? (
-              <div className="error-message">
-                ⚠️ {result.error}
-              </div>
-            ) : (
-              <>
-                {result.answer && (
-                  <div className="answer-text">
-                    <strong>Answer:</strong> {renderMathContent(result.answer)}
-                  </div>
-                )}
-                {result.summary && (
-                  <div className="summary-text">
-                    <strong>Summary:</strong> {renderMathContent(result.summary)}
-                  </div>
-                )}
-                {result.steps && (
-                  <div className="steps-container">
-                    <strong>Steps:</strong>
-                    <pre className="steps-pre">{renderMathContent(result.steps)}</pre>
-                  </div>
-                )}
-                {result.message && (
-                  <div className="message-box">
-                    {result.message}
-                  </div>
-                )}
-                {result.suggestion && (
-                  <div className="suggestion-box">
-                    💡 <strong>Suggestion:</strong> {result.suggestion}
-                  </div>
-                )}
-                {result.disclaimer && (
-                  <div className="disclaimer-box">
-                    ⚠️ {result.disclaimer}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+        {!loading && !error && route && (
+          <>
+            <RouteDisplay route={route} />
+            
+            <RouteVisualization 
+              selectedRoute={route}
+              routeExplanation={routeExplanation}
+            />
+          </>
         )}
 
-        {showFeedback && (
-          <div className="feedback-container fade-in">
-            {!feedbackSubmitted ? (
-              <>
-                <h3 className="feedback-title">
-                  🔄 Was this solution helpful?
-                </h3>
-                
-                <div className="quick-feedback-buttons">
-                  <button 
-                    onClick={() => handleFeedbackSubmit('helpful')}
-                    className="feedback-thumb-button thumb-up"
-                    title="This solution was helpful"
-                  >
-                    👍 Helpful
-                  </button>
-                  <button 
-                    onClick={() => handleFeedbackSubmit('👎')}
-                    className="feedback-thumb-button thumb-down"
-                    title="This solution needs improvement"
-                  >
-                    👎 Needs Fix
-                  </button>
-                </div>
-                
-                <div className="detailed-feedback-section">
-                  <details>
-                    <summary className="detailed-feedback-toggle">
-                      📝 Provide detailed feedback (optional)
-                    </summary>
-                    
-                    <div className="mb-15">
-                      <label className="feedback-label">
-                        Rate this solution (1-5):
-                      </label>
-                      <select 
-                        value={feedbackData.rating} 
-                        onChange={e => setFeedbackData({...feedbackData, rating: parseInt(e.target.value)})}
-                        className="rating-select"
-                      >
-                        <option value={1}>1 - Poor</option>
-                        <option value={2}>2 - Fair</option>
-                        <option value={3}>3 - Good</option>
-                        <option value={4}>4 - Very Good</option>
-                        <option value={5}>5 - Excellent</option>
-                      </select>
-                    </div>
-                    
-                    <div className="mb-15">
-                      <label className="feedback-label">
-                        Your feedback or improved solution:
-                      </label>
-                      <textarea
-                        value={feedbackData.feedback}
-                        onChange={e => setFeedbackData({...feedbackData, feedback: e.target.value})}
-                        placeholder="Please provide your feedback, corrections, or improved solution..."
-                        className="feedback-textarea"
-                      />
-                    </div>
-                    
-                    <div className="feedback-buttons">
-                      <button 
-                        onClick={handleDetailedFeedbackSubmit}
-                        className="feedback-button feedback-submit"
-                      >
-                        Submit Detailed Feedback
-                      </button>
-                    </div>
-                  </details>
-                </div>
-                
-                <button 
-                  onClick={() => setShowFeedback(false)}
-                  className="feedback-skip-button"
-                >
-                  Skip Feedback
-                </button>
-              </>
-            ) : (
-              <div className="feedback-success">
-                ✅ Thank you for your feedback! This helps us improve.
-              </div>
+        {!loading && result && !error && (
+          <>
+            <ResultsContainer result={result} />
+
+            {steps.length > 0 && (
+              <StepByStep steps={steps} isExpanded={true} />
             )}
-          </div>
+
+            <ExportPanel 
+              query={query}
+              result={result}
+              steps={steps}
+              route={route}
+            />
+          </>
+        )}
+
+        {showFeedback && !loading && (
+          <FeedbackContainer
+            onFeedbackSubmit={handleFeedbackSubmit}
+            onSkip={() => setShowFeedback(false)}
+            submitted={feedbackSubmitted}
+            isLoading={loading}
+          />
         )}
       </div>
     </div>

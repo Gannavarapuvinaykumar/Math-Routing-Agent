@@ -1,0 +1,126 @@
+/* Export Panel Component */
+.export-panel {
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.9), rgba(255, 243, 230, 0.9));
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 15px;
+  margin-top: 20px;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.export-toggle {
+  width: 100%;
+  padding: 15px 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(14px, 2.5vw, 16px);
+  color: #e65100;
+  transition: all 0.3s ease;
+}
+
+.export-toggle:hover {
+  background: rgba(255, 140, 0, 0.1);
+}
+
+.export-icon {
+  font-size: 20px;
+}
+
+.toggle-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.export-content {
+  padding: 0 20px 20px 20px;
+}
+
+.export-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.export-btn {
+  padding: 14px 20px;
+  border: 2px solid;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: clamp(13px, 2vw, 14px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.latex-btn {
+  border-color: #e91e63;
+  color: #e91e63;
+}
+
+.latex-btn:hover {
+  background: #e91e63;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.3);
+}
+
+.markdown-btn {
+  border-color: #2196f3;
+  color: #2196f3;
+}
+
+.markdown-btn:hover {
+  background: #2196f3;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+.text-btn {
+  border-color: #607d8b;
+  color: #607d8b;
+}
+
+.text-btn:hover {
+  background: #607d8b;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(96, 125, 139, 0.3);
+}
+
+.save-btn {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.save-btn:hover {
+  background: #4caf50;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+}
+
+.export-btn:active {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .export-buttons {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .export-buttons {
+    grid-template-columns: 1fr;
+  }
+}

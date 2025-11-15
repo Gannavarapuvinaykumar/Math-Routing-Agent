@@ -1,0 +1,134 @@
+/* Step-by-Step Solution Component */
+.step-by-step-container {
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.9), rgba(255, 243, 230, 0.9));
+  border: 2px solid rgba(255, 140, 0, 0.3);
+  border-radius: 15px;
+  margin-top: 20px;
+  overflow: hidden;
+  animation: slideInUp 0.5s ease-out;
+}
+
+.step-toggle-button {
+  width: 100%;
+  padding: 18px 25px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: clamp(14px, 2.5vw, 16px);
+  color: #e65100;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.step-toggle-button:hover {
+  background: rgba(255, 140, 0, 0.1);
+}
+
+.step-toggle-icon {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  color: #ff8f00;
+}
+
+.step-count {
+  margin-left: auto;
+  font-size: clamp(12px, 2vw, 14px);
+  color: #f57c00;
+  font-weight: 600;
+  background: rgba(255, 140, 0, 0.15);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.steps-content {
+  padding: 0 25px 25px 25px;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.step-item {
+  display: flex;
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  animation: fadeInStep 0.4s ease-out backwards;
+}
+
+.step-item:nth-child(1) { animation-delay: 0.1s; }
+.step-item:nth-child(2) { animation-delay: 0.15s; }
+.step-item:nth-child(3) { animation-delay: 0.2s; }
+.step-item:nth-child(4) { animation-delay: 0.25s; }
+.step-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes fadeInStep {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.step-item:hover {
+  box-shadow: 0 4px 12px rgba(255, 140, 0, 0.15);
+  transform: translateX(5px);
+}
+
+.step-number {
+  min-width: 70px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff8f00, #f57c00);
+  color: white;
+  font-weight: 700;
+  font-size: clamp(12px, 2vw, 13px);
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.3);
+}
+
+.step-content {
+  flex: 1;
+  color: #2c3e50;
+  font-size: clamp(14px, 2.5vw, 16px);
+  line-height: 1.6;
+  padding: 5px 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .step-item {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .step-number {
+    width: 100%;
+  }
+}
