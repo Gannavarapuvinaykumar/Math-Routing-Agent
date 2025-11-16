@@ -3,6 +3,7 @@ import './App.css';
 import backgroundImage from './mathematics-numbers-and-mathematical-data-ftjn425sx2rnifuk.jpg';
 import HomePage from './components/HomePage';
 import Header from './components/Header';
+import HamburgerMenu from './components/HamburgerMenu';
 import SearchInput from './components/SearchInput';
 import RouteDisplay from './components/RouteDisplay';
 import RouteVisualization from './components/RouteVisualization';
@@ -20,6 +21,7 @@ import { parseResponse, shouldShowFeedback } from './utils/responseParser';
 function App() {
   const [showHomePage, setShowHomePage] = useState(true);
   const [query, setQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState(''); // Only updates when search is actually submitted
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState('routing');
@@ -84,6 +86,7 @@ function App() {
     setSteps([]);
     setRouteExplanation('');
     setShowFeedback(false);
+    setSubmittedQuery(query); // Save the query that was actually submitted
     
     try {
       // Simulate routing stage
@@ -180,6 +183,27 @@ function App() {
     }
   };
 
+  const handleNewChat = (chatQuery = null) => {
+    // Reset all states for new chat
+    setQuery(chatQuery || '');
+    setResult(null);
+    setLoading(false);
+    setRoute('');
+    setSteps([]);
+    setRouteExplanation('');
+    setShowFeedback(false);
+    setFeedbackSubmitted(false);
+    setError(null);
+    
+    // If a specific query is provided (from chat history), run it
+    if (chatQuery && chatQuery.trim()) {
+      // Small delay to allow UI to update
+      setTimeout(() => {
+        handleSearch();
+      }, 100);
+    }
+  };
+
   if (showHomePage) {
     return <HomePage onEnter={() => setShowHomePage(false)} />;
   }
@@ -187,6 +211,8 @@ function App() {
   return (
     <div className="app-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
       <ParticleBackground />
+      
+      <HamburgerMenu onNewChat={handleNewChat} submittedQuery={submittedQuery} />
 
       <div className="main-content">
         <Header />

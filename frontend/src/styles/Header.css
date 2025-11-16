@@ -21,6 +21,14 @@
   position: relative;
 }
 
+.header h1 .emoji,
+.header p .emoji {
+  -webkit-text-fill-color: initial;
+  background: none;
+  background-clip: unset;
+  -webkit-background-clip: unset;
+}
+
 @keyframes textGradient {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
