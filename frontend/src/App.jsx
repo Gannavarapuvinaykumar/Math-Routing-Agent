@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import backgroundImage from './mathematics-numbers-and-mathematical-data-ftjn425sx2rnifuk.jpg';
+import HomePage from './components/HomePage';
 import Header from './components/Header';
 import SearchInput from './components/SearchInput';
 import RouteDisplay from './components/RouteDisplay';
@@ -8,7 +10,6 @@ import ResultsContainer from './components/ResultsContainer';
 import StepByStep from './components/StepByStep';
 import FeedbackContainer from './components/FeedbackContainer';
 import ParticleBackground from './components/ParticleBackground';
-import HistoryPanel, { addToHistory } from './components/HistoryPanel';
 import LoadingAnimation from './components/LoadingAnimation';
 import ErrorMessage from './components/ErrorMessage';
 import ExportPanel from './components/ExportPanel';
@@ -17,6 +18,7 @@ import { renderMathJax } from './utils/mathRenderer';
 import { parseResponse, shouldShowFeedback } from './utils/responseParser';
 
 function App() {
+  const [showHomePage, setShowHomePage] = useState(true);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -110,9 +112,6 @@ function App() {
         setRouteExplanation(generateRouteExplanation(data.route, data));
       }
       
-      // Add to history
-      addToHistory(query, parsedData.answer, data.route);
-      
       // Show feedback for successful non-KB responses
       if (shouldShowFeedback(data, data.route)) {
         setShowFeedback(true);
@@ -154,12 +153,6 @@ function App() {
     }
   };
 
-  const handleSelectFromHistory = (historicalQuery) => {
-    setQuery(historicalQuery);
-    // Optionally trigger search immediately
-    // handleSearch();
-  };
-
   const handleFeedbackSubmit = async (feedbackType, feedbackText = '') => {
     try {
       const responseContent = result?.answer || result?.message || result?.error || JSON.stringify(result);
@@ -187,14 +180,16 @@ function App() {
     }
   };
 
+  if (showHomePage) {
+    return <HomePage onEnter={() => setShowHomePage(false)} />;
+  }
+
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
       <ParticleBackground />
 
       <div className="main-content">
         <Header />
-
-        <HistoryPanel onSelectQuery={handleSelectFromHistory} />
 
         <SearchInput
           query={query}

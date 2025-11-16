@@ -72,14 +72,17 @@ body {
 .app-container {
   min-height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #667eea 75%, #764ba2 100%);
   background-size: 400% 400%;
-  animation: gradientShift 8s ease infinite;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   padding: clamp(8px, 2vw, 16px);
   box-sizing: border-box;
   margin: 0;
-  overflow-x: hidden;
   position: relative;
+  overflow-x: hidden;
+  animation: gradientShift 15s ease infinite;
 }
 
 @keyframes gradientShift {
@@ -92,18 +95,39 @@ body {
   max-width: 95vw;
   width: 100%;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   border-radius: 25px;
   padding: clamp(24px, 4vw, 60px);
   box-shadow: 
-    0 25px 50px rgba(0, 0, 0, 0.15),
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    0 25px 50px rgba(102, 126, 234, 0.25),
+    0 15px 35px rgba(240, 147, 251, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 80px rgba(118, 75, 162, 0.15);
   box-sizing: border-box;
-  animation: slideInUp 0.8s ease-out;
+  animation: slideInUp 0.8s ease-out, contentGlow 8s ease-in-out infinite;
   position: relative;
   overflow: hidden;
+}
+
+@keyframes contentGlow {
+  0%, 100% {
+    box-shadow: 
+      0 25px 50px rgba(102, 126, 234, 0.25),
+      0 15px 35px rgba(240, 147, 251, 0.15),
+      0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 0 80px rgba(118, 75, 162, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 25px 50px rgba(240, 147, 251, 0.3),
+      0 15px 35px rgba(102, 126, 234, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 0 100px rgba(240, 147, 251, 0.2);
+  }
 }
 
 .main-content::before {
@@ -112,8 +136,13 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(102, 126, 234, 0.6),
+    rgba(240, 147, 251, 0.8),
+    rgba(118, 75, 162, 0.6),
+    transparent);
   animation: shimmer 3s infinite;
 }
 
@@ -200,7 +229,7 @@ body {
   width: 100%;
   padding: 20px 25px;
   font-size: clamp(14px, 2vw, 16px);
-  border: 2px solid rgba(102, 126, 234, 0.2);
+  border: 2px solid rgba(102, 126, 234, 0.3);
   border-radius: 15px;
   outline: none;
   transition: all 0.4s ease;
@@ -212,13 +241,18 @@ body {
   z-index: 1;
   color: #2c3e50;
   font-weight: 500;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
 }
 
 .query-input:focus {
   border-color: #667eea;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #667eea, #764ba2, #f093fb) border-box;
+  border: 2px solid transparent;
   box-shadow: 
-    0 0 0 3px rgba(102, 126, 234, 0.1),
-    0 10px 25px rgba(102, 126, 234, 0.2);
+    0 0 0 3px rgba(102, 126, 234, 0.15),
+    0 10px 30px rgba(102, 126, 234, 0.25),
+    0 0 40px rgba(240, 147, 251, 0.15);
   transform: translateY(-2px);
 }
 
@@ -252,17 +286,28 @@ body {
 }
 
 .search-button:not(:disabled) {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-size: 200% 200%;
   box-shadow: 
     0 8px 25px rgba(102, 126, 234, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+    0 4px 15px rgba(240, 147, 251, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(118, 75, 162, 0.2);
+  animation: buttonGradientFlow 6s ease infinite;
+}
+
+@keyframes buttonGradientFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .search-button:not(:disabled):hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.02);
   box-shadow: 
-    0 12px 30px rgba(102, 126, 234, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.2);
+    0 12px 35px rgba(102, 126, 234, 0.5),
+    0 6px 20px rgba(240, 147, 251, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 60px rgba(118, 75, 162, 0.3);
 }
 
 .search-button:not(:disabled):active {
@@ -309,8 +354,13 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-  animation: routeShimmer 2s infinite;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(102, 126, 234, 0.15),
+    rgba(240, 147, 251, 0.15),
+    rgba(118, 75, 162, 0.15),
+    transparent);
+  animation: routeShimmer 3s infinite;
 }
 
 @keyframes routeShimmer {
@@ -354,9 +404,19 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.08), 
+    rgba(240, 147, 251, 0.08),
+    rgba(118, 75, 162, 0.08));
+  background-size: 200% 200%;
   border-radius: 20px;
   z-index: -1;
+  animation: resultGradient 10s ease infinite;
+}
+
+@keyframes resultGradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 .error-message {
